@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trialforge"
+version = "0.1.0"
+description = "TrialForge Python client"
+requires-python = ">=3.11"
+dependencies = [
+  "requests>=2.31",
+  "tqdm>=4.66",
+  "websocket-client>=1.8",
+]
+
+[project.scripts]
+trialforge = "trialforge.client:main"

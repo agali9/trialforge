@@ -1,0 +1,2 @@
+class TrialForgeError(Exception):
+    pass
