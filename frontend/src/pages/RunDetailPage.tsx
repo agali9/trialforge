@@ -21,7 +21,9 @@ export default function RunDetailPage() {
     if (!id || run.data?.status !== "running") return;
     const token = localStorage.getItem("token");
     if (!token) return;
-    const ws = new WebSocket(`ws://${window.location.host}/ws/runs/${id}?token=${token}`);
+    const apiBase = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.host}/api`;
+    const wsBase = apiBase.replace(/^http/, "ws").replace(/\/api\/?$/, "");
+    const ws = new WebSocket(`${wsBase}/ws/runs/${id}?token=${token}`);
     ws.onopen = () => setLive(true);
     ws.onclose = () => setLive(false);
     return () => ws.close();

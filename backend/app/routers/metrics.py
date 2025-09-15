@@ -35,7 +35,10 @@ async def batch_write(payload: MetricBatch, current_user: User = Depends(get_cur
         )
         await db.commit()
         for item in values:
-            await redis_client.publish(f"metrics:{item['run_id']}", json.dumps(item, default=str))
+            try:
+                await redis_client.publish(f"metrics:{item['run_id']}", json.dumps(item, default=str))
+            except Exception:
+                pass
     return {"written": len(values)}
 
 
@@ -71,10 +74,10 @@ async def metric_data(
                   FROM metrics
                   WHERE run_id = :run_id AND metric_name = :metric_name
                 )
-                SELECT MIN(step) as step, AVG(value) as value, time_bucket(make_interval(secs => (SELECT step_bucket FROM bucket_size)), timestamp) as bucket_time
+                SELECT MIN(step) as step, AVG(value) as value, MIN(timestamp) as bucket_time
                 FROM metrics
                 WHERE run_id = :run_id AND metric_name = :metric_name
-                GROUP BY bucket_time
+                GROUP BY FLOOR(step / (SELECT step_bucket FROM bucket_size))
                 ORDER BY bucket_time
                 """
             )

@@ -1,0 +1,50 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: timescale/timescaledb:latest-pg16
+        env:
+          POSTGRES_USER: trialforge
+          POSTGRES_PASSWORD: trialforge
+          POSTGRES_DB: trialforge_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U trialforge -d trialforge_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -r backend/requirements.txt
+      - name: Run database migrations
+        working-directory: backend
+        run: alembic upgrade head
+        env:
+          DATABASE_URL: postgresql+asyncpg://trialforge:trialforge@localhost:5432/trialforge_test
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret
+      - run: pytest backend/tests/ -v
+        env:
+          DATABASE_URL: postgresql+asyncpg://trialforge:trialforge@localhost:5432/trialforge_test
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - run: cd frontend && npm ci && npm run build

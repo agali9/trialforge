@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import BackendStatusBanner, { useBackendStatus } from "../components/BackendStatusBanner";
 import { useAuth } from "./AuthContext";
 
 export default function LoginPage() {
@@ -9,6 +10,8 @@ export default function LoginPage() {
   const [workspaceName, setWorkspaceName] = useState("");
   const navigate = useNavigate();
   const { login, registerAndLogin } = useAuth();
+  const backend = useBackendStatus();
+  const backendReady = backend.status === "ready";
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -21,8 +24,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center px-4">
       <form onSubmit={onSubmit} className="w-full max-w-md p-6 rounded border border-[var(--color-border)] bg-[var(--color-surface)]">
+        <BackendStatusBanner status={backend.status} elapsed={backend.elapsed} />
         <div className="mb-4 flex rounded border border-[var(--color-border)] p-1">
           <button
             type="button"
@@ -51,7 +55,9 @@ export default function LoginPage() {
             required
           />
         )}
-        <button className="w-full p-2 rounded bg-[var(--color-accent)] text-white">{mode === "register" ? "Create account" : "Sign In"}</button>
+        <button className="w-full p-2 rounded bg-[var(--color-accent)] text-white disabled:opacity-50" disabled={!backendReady}>
+          {backendReady ? (mode === "register" ? "Create account" : "Sign In") : "Waiting for backend..."}
+        </button>
       </form>
     </div>
   );

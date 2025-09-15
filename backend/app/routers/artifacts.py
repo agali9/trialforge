@@ -19,13 +19,23 @@ minio_client = Minio(
     settings.MINIO_ENDPOINT,
     access_key=settings.MINIO_ACCESS_KEY,
     secret_key=settings.MINIO_SECRET_KEY,
-    secure=False,
+    secure=settings.MINIO_SECURE,
 )
 BUCKET = "trialforge-artifacts"
 
 
+def _storage_configured() -> bool:
+    return settings.MINIO_ENDPOINT != "minio:9000"
+
+
+def _raise_storage_not_configured() -> None:
+    raise HTTPException(status_code=503, detail="Artifact storage is not configured")
+
+
 @router.post("/presign")
 async def presign_upload(payload: ArtifactPresignRequest, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    if not _storage_configured():
+        _raise_storage_not_configured()
     run = await db.execute(select(Run).where(Run.id == payload.run_id))
     if run.scalar_one_or_none() is None:
         raise HTTPException(status_code=404, detail="Run not found")
@@ -48,6 +58,8 @@ async def list_artifacts(run_id: str, current_user: User = Depends(get_current_u
 
 @router.get("/{artifact_id}/download")
 async def download_artifact(artifact_id: str, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    if not _storage_configured():
+        _raise_storage_not_configured()
     result = await db.execute(select(Artifact).where(Artifact.id == artifact_id))
     artifact = result.scalar_one_or_none()
     if artifact is None:
